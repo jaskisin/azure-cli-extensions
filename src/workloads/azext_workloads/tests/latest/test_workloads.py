@@ -13,23 +13,27 @@ from azure.cli.testsdk import ScenarioTest
 TEST_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), '..'))
 
 
-class WorkloadsScenario(ScenarioTest):
-    def test_workloads_svi(self):
+class WorkloadsSapVirtualInstanceScenario(ScenarioTest):
+    def test_workloads_distributed_ha_avset_difftransrgShare(self):
         self.kwargs.update({
-            'name': 'C36',
-            'configuration': os.path.join(TEST_DIR, 'create_infra_distributed_non_ha_config.json'),
-            'msi': os.path.join(TEST_DIR, 'MSI.json')
+            'name': 'CL1',
+            'resourceGroup': 'PS_CLI_TF_RG',
+            'environment': 'NonProd',
+            'sapProduct': 'S4HANA',
+            'configuration': os.path.join(TEST_DIR, 'data', 'CreateDistributedHAAvSetDiffTransRgShareConfig.json'),
+            'msi': os.path.join(TEST_DIR, 'data', 'MSI.json')
         })
 
-        self.cmd('az workloads sap-virtual-instance create -g CLI-TESTING -n {name} --environment NonProd --sap-product S4HANA --configuration "{configuration}" --identity "{msi}"', checks=[
+        self.cmd('az workloads sap-virtual-instance create -g {resourceGroup} -n {name} --environment {environment} --sap-product {sapProduct} --configuration "{configuration}" --identity "{msi}"', checks=[
             self.check('name', '{name}'),
-            self.check('resourceGroup', 'CLI-TESTING'),
-            self.check('sapProduct', 'S4HANA'),
-            self.check('environment', 'NonProd'),
+            self.check('resourceGroup', '{resourceGroup}'),
+            self.check('sapProduct', '{sapProduct}'),
+            self.check('environment', '{environment}'),
             self.check('provisioningState', 'Succeeded'),
             self.check('configuration.configurationType', 'DeploymentWithOSConfig'),
             self.check('configuration.infrastructureConfiguration.deploymentType', 'ThreeTier')
         ])
+        
 
     def test_workloads_svi_install(self):
         self.kwargs.update({

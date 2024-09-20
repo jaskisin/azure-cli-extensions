@@ -48,7 +48,7 @@ class SVICreate(_SVICreate):
         if has_value(args.configuration):
             args.configuration_org = args.configuration.to_serialized_data()
 
-    class SAPVirtualInstancesCreate(_SVICreate.SAPVirtualInstancesCreate):
+    class SAPVirtualInstancesCreate(_SVICreate.SapVirtualInstancesCreate):
         @property
         def content(self):
             from azure.cli.core.aaz import AAZObjectType, AAZStrType, AAZDictType

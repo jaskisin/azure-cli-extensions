@@ -12,15 +12,16 @@ from azure.cli.core.aaz import *
 
 
 @register_command(
-    "workloads sap-central-instance wait",
+    "workloads sap-virtual-instance database-instance update",
 )
-class Wait(AAZWaitCommand):
-    """Place the CLI in a waiting state until a condition is met.
+class Update(AAZCommand):
+    """Update the Database resource corresponding to the Virtual Instance for SAP solutions resource.This will be used by service only. PUT by end user will return a Bad Request error.
     """
 
     _aaz_info = {
+        "version": "2024-09-01",
         "resources": [
-            ["mgmt-plane", "/subscriptions/{}/resourcegroups/{}/providers/microsoft.workloads/sapvirtualinstances/{}/centralinstances/{}", "2023-10-01-preview"],
+            ["mgmt-plane", "/subscriptions/{}/resourcegroups/{}/providers/microsoft.workloads/sapvirtualinstances/{}/databaseinstances/{}", "2024-09-01"],
         ]
     }
 
@@ -40,9 +41,9 @@ class Wait(AAZWaitCommand):
         # define Arg Group ""
 
         _args_schema = cls._args_schema
-        _args_schema.central_instance_name = AAZStrArg(
-            options=["-n", "--name", "--central-instance-name"],
-            help="Central Services Instance resource name string modeled as parameter for auto generation to work correctly.",
+        _args_schema.database_instance_name = AAZStrArg(
+            options=["-n", "--name", "--database-instance-name"],
+            help="Database resource name string modeled as parameter for auto generation to work correctly.",
             required=True,
             id_part="child_name_1",
             fmt=AAZStrArgFormat(
@@ -53,7 +54,7 @@ class Wait(AAZWaitCommand):
             required=True,
         )
         _args_schema.sap_virtual_instance_name = AAZStrArg(
-            options=["--vis-name", "--sap-virtual-instance-name"],
+            options=["--sap-virtual-instance-name"],
             help="The name of the Virtual Instances for SAP solutions resource",
             required=True,
             id_part="name",
@@ -61,11 +62,23 @@ class Wait(AAZWaitCommand):
                 pattern="^[a-zA-Z][a-zA-Z0-9]{2}$",
             ),
         )
+
+        # define Arg Group "Properties"
+
+        _args_schema = cls._args_schema
+        _args_schema.tags = AAZDictArg(
+            options=["--tags"],
+            arg_group="Properties",
+            help="Gets or sets the Resource tags.",
+        )
+
+        tags = cls._args_schema.tags
+        tags.Element = AAZStrArg()
         return cls._args_schema
 
     def _execute_operations(self):
         self.pre_operations()
-        self.SAPCentralInstancesGet(ctx=self.ctx)()
+        self.SapDatabaseInstancesUpdate(ctx=self.ctx)()
         self.post_operations()
 
     @register_callback
@@ -77,10 +90,10 @@ class Wait(AAZWaitCommand):
         pass
 
     def _output(self, *args, **kwargs):
-        result = self.deserialize_output(self.ctx.vars.instance, client_flatten=False)
+        result = self.deserialize_output(self.ctx.vars.instance, client_flatten=True)
         return result
 
-    class SAPCentralInstancesGet(AAZHttpOperation):
+    class SapDatabaseInstancesUpdate(AAZHttpOperation):
         CLIENT_TYPE = "MgmtClient"
 
         def __call__(self, *args, **kwargs):
@@ -94,13 +107,13 @@ class Wait(AAZWaitCommand):
         @property
         def url(self):
             return self.client.format_url(
-                "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Workloads/sapVirtualInstances/{sapVirtualInstanceName}/centralInstances/{centralInstanceName}",
+                "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Workloads/sapVirtualInstances/{sapVirtualInstanceName}/databaseInstances/{databaseInstanceName}",
                 **self.url_parameters
             )
 
         @property
         def method(self):
-            return "GET"
+            return "PATCH"
 
         @property
         def error_format(self):
@@ -110,7 +123,7 @@ class Wait(AAZWaitCommand):
         def url_parameters(self):
             parameters = {
                 **self.serialize_url_param(
-                    "centralInstanceName", self.ctx.args.central_instance_name,
+                    "databaseInstanceName", self.ctx.args.database_instance_name,
                     required=True,
                 ),
                 **self.serialize_url_param(
@@ -132,7 +145,7 @@ class Wait(AAZWaitCommand):
         def query_parameters(self):
             parameters = {
                 **self.serialize_query_param(
-                    "api-version", "2023-10-01-preview",
+                    "api-version", "2024-09-01",
                     required=True,
                 ),
             }
@@ -142,10 +155,28 @@ class Wait(AAZWaitCommand):
         def header_parameters(self):
             parameters = {
                 **self.serialize_header_param(
+                    "Content-Type", "application/json",
+                ),
+                **self.serialize_header_param(
                     "Accept", "application/json",
                 ),
             }
             return parameters
+
+        @property
+        def content(self):
+            _content_value, _builder = self.new_content_builder(
+                self.ctx.args,
+                typ=AAZObjectType,
+                typ_kwargs={"flags": {"required": True, "client_flatten": True}}
+            )
+            _builder.set_prop("tags", AAZDictType, ".tags")
+
+            tags = _builder.get(".tags")
+            if tags is not None:
+                tags.set_elements(AAZStrType, ".")
+
+            return self.serialize_content(_content_value)
 
         def on_200(self, session):
             data = self.deserialize_http_content(session)
@@ -187,49 +218,27 @@ class Wait(AAZWaitCommand):
             )
 
             properties = cls._schema_on_200.properties
-            properties.enqueue_replication_server_properties = AAZObjectType(
-                serialized_name="enqueueReplicationServerProperties",
-            )
-            properties.enqueue_server_properties = AAZObjectType(
-                serialized_name="enqueueServerProperties",
-            )
-            properties.errors = AAZObjectType(
+            properties.database_sid = AAZStrType(
+                serialized_name="databaseSid",
                 flags={"read_only": True},
             )
-            properties.gateway_server_properties = AAZObjectType(
-                serialized_name="gatewayServerProperties",
-            )
-            properties.health = AAZStrType(
+            properties.database_type = AAZStrType(
+                serialized_name="databaseType",
                 flags={"read_only": True},
             )
-            properties.instance_no = AAZStrType(
-                serialized_name="instanceNo",
-                flags={"read_only": True},
-            )
-            properties.kernel_patch = AAZStrType(
-                serialized_name="kernelPatch",
-                nullable=True,
-                flags={"read_only": True},
-            )
-            properties.kernel_version = AAZStrType(
-                serialized_name="kernelVersion",
-                nullable=True,
+            properties.errors = AAZObjectType()
+            properties.ip_address = AAZStrType(
+                serialized_name="ipAddress",
                 flags={"read_only": True},
             )
             properties.load_balancer_details = AAZObjectType(
                 serialized_name="loadBalancerDetails",
-                flags={"read_only": True},
-            )
-            properties.message_server_properties = AAZObjectType(
-                serialized_name="messageServerProperties",
             )
             properties.provisioning_state = AAZStrType(
                 serialized_name="provisioningState",
                 flags={"read_only": True},
             )
-            properties.status = AAZStrType(
-                flags={"read_only": True},
-            )
+            properties.status = AAZStrType()
             properties.subnet = AAZStrType(
                 flags={"read_only": True},
             )
@@ -238,97 +247,12 @@ class Wait(AAZWaitCommand):
                 flags={"read_only": True},
             )
 
-            enqueue_replication_server_properties = cls._schema_on_200.properties.enqueue_replication_server_properties
-            enqueue_replication_server_properties.ers_version = AAZStrType(
-                serialized_name="ersVersion",
-                flags={"read_only": True},
-            )
-            enqueue_replication_server_properties.health = AAZStrType(
-                flags={"read_only": True},
-            )
-            enqueue_replication_server_properties.hostname = AAZStrType(
-                flags={"read_only": True},
-            )
-            enqueue_replication_server_properties.instance_no = AAZStrType(
-                serialized_name="instanceNo",
-                flags={"read_only": True},
-            )
-            enqueue_replication_server_properties.ip_address = AAZStrType(
-                serialized_name="ipAddress",
-                flags={"read_only": True},
-            )
-            enqueue_replication_server_properties.kernel_patch = AAZStrType(
-                serialized_name="kernelPatch",
-                flags={"read_only": True},
-            )
-            enqueue_replication_server_properties.kernel_version = AAZStrType(
-                serialized_name="kernelVersion",
-                flags={"read_only": True},
-            )
-
-            enqueue_server_properties = cls._schema_on_200.properties.enqueue_server_properties
-            enqueue_server_properties.health = AAZStrType(
-                flags={"read_only": True},
-            )
-            enqueue_server_properties.hostname = AAZStrType(
-                flags={"read_only": True},
-            )
-            enqueue_server_properties.ip_address = AAZStrType(
-                serialized_name="ipAddress",
-                flags={"read_only": True},
-            )
-            enqueue_server_properties.port = AAZIntType(
-                nullable=True,
-                flags={"read_only": True},
-            )
-
             errors = cls._schema_on_200.properties.errors
             errors.properties = AAZObjectType()
-            _WaitHelper._build_schema_error_definition_read(errors.properties)
-
-            gateway_server_properties = cls._schema_on_200.properties.gateway_server_properties
-            gateway_server_properties.health = AAZStrType(
-                flags={"read_only": True},
-            )
-            gateway_server_properties.port = AAZIntType(
-                nullable=True,
-                flags={"read_only": True},
-            )
+            _UpdateHelper._build_schema_error_definition_read(errors.properties)
 
             load_balancer_details = cls._schema_on_200.properties.load_balancer_details
             load_balancer_details.id = AAZStrType(
-                flags={"read_only": True},
-            )
-
-            message_server_properties = cls._schema_on_200.properties.message_server_properties
-            message_server_properties.health = AAZStrType(
-                flags={"read_only": True},
-            )
-            message_server_properties.hostname = AAZStrType(
-                flags={"read_only": True},
-            )
-            message_server_properties.http_port = AAZIntType(
-                serialized_name="httpPort",
-                nullable=True,
-                flags={"read_only": True},
-            )
-            message_server_properties.https_port = AAZIntType(
-                serialized_name="httpsPort",
-                nullable=True,
-                flags={"read_only": True},
-            )
-            message_server_properties.internal_ms_port = AAZIntType(
-                serialized_name="internalMsPort",
-                nullable=True,
-                flags={"read_only": True},
-            )
-            message_server_properties.ip_address = AAZStrType(
-                serialized_name="ipAddress",
-                flags={"read_only": True},
-            )
-            message_server_properties.ms_port = AAZIntType(
-                serialized_name="msPort",
-                nullable=True,
                 flags={"read_only": True},
             )
 
@@ -336,11 +260,9 @@ class Wait(AAZWaitCommand):
             vm_details.Element = AAZObjectType()
 
             _element = cls._schema_on_200.properties.vm_details.Element
+            _element.status = AAZStrType()
             _element.storage_details = AAZListType(
                 serialized_name="storageDetails",
-                flags={"read_only": True},
-            )
-            _element.type = AAZStrType(
                 flags={"read_only": True},
             )
             _element.virtual_machine_id = AAZStrType(
@@ -382,8 +304,8 @@ class Wait(AAZWaitCommand):
             return cls._schema_on_200
 
 
-class _WaitHelper:
-    """Helper class for Wait"""
+class _UpdateHelper:
+    """Helper class for Update"""
 
     _schema_error_definition_read = None
 
@@ -417,4 +339,4 @@ class _WaitHelper:
         _schema.message = cls._schema_error_definition_read.message
 
 
-__all__ = ["Wait"]
+__all__ = ["Update"]

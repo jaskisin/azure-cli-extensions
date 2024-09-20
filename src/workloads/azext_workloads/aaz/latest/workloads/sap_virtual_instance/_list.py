@@ -23,9 +23,9 @@ class List(AAZCommand):
     """
 
     _aaz_info = {
-        "version": "2023-10-01-preview",
+        "version": "2024-09-01",
         "resources": [
-            ["mgmt-plane", "/subscriptions/{}/resourcegroups/{}/providers/microsoft.workloads/sapvirtualinstances", "2023-10-01-preview"],
+            ["mgmt-plane", "/subscriptions/{}/resourcegroups/{}/providers/microsoft.workloads/sapvirtualinstances", "2024-09-01"],
         ]
     }
 
@@ -53,7 +53,7 @@ class List(AAZCommand):
 
     def _execute_operations(self):
         self.pre_operations()
-        self.SAPVirtualInstancesListByResourceGroup(ctx=self.ctx)()
+        self.SapVirtualInstancesListByResourceGroup(ctx=self.ctx)()
         self.post_operations()
 
     @register_callback
@@ -69,7 +69,7 @@ class List(AAZCommand):
         next_link = self.deserialize_output(self.ctx.vars.instance.next_link)
         return result, next_link
 
-    class SAPVirtualInstancesListByResourceGroup(AAZHttpOperation):
+    class SapVirtualInstancesListByResourceGroup(AAZHttpOperation):
         CLIENT_TYPE = "MgmtClient"
 
         def __call__(self, *args, **kwargs):
@@ -113,7 +113,7 @@ class List(AAZCommand):
         def query_parameters(self):
             parameters = {
                 **self.serialize_query_param(
-                    "api-version", "2023-10-01-preview",
+                    "api-version", "2024-09-01",
                     required=True,
                 ),
             }
@@ -149,7 +149,9 @@ class List(AAZCommand):
             _schema_on_200.next_link = AAZStrType(
                 serialized_name="nextLink",
             )
-            _schema_on_200.value = AAZListType()
+            _schema_on_200.value = AAZListType(
+                flags={"required": True},
+            )
 
             value = cls._schema_on_200.value
             value.Element = AAZObjectType()
@@ -166,7 +168,7 @@ class List(AAZCommand):
                 flags={"read_only": True},
             )
             _element.properties = AAZObjectType(
-                flags={"required": True, "client_flatten": True},
+                flags={"client_flatten": True},
             )
             _element.system_data = AAZObjectType(
                 serialized_name="systemData",
@@ -178,6 +180,14 @@ class List(AAZCommand):
             )
 
             identity = cls._schema_on_200.value.Element.identity
+            identity.principal_id = AAZStrType(
+                serialized_name="principalId",
+                flags={"read_only": True},
+            )
+            identity.tenant_id = AAZStrType(
+                serialized_name="tenantId",
+                flags={"read_only": True},
+            )
             identity.type = AAZStrType(
                 flags={"required": True},
             )
@@ -207,12 +217,8 @@ class List(AAZCommand):
             properties.environment = AAZStrType(
                 flags={"required": True},
             )
-            properties.errors = AAZObjectType(
-                flags={"read_only": True},
-            )
-            properties.health = AAZStrType(
-                flags={"read_only": True},
-            )
+            properties.errors = AAZObjectType()
+            properties.health = AAZStrType()
             properties.managed_resource_group_configuration = AAZObjectType(
                 serialized_name="managedResourceGroupConfiguration",
             )
@@ -227,12 +233,8 @@ class List(AAZCommand):
                 serialized_name="sapProduct",
                 flags={"required": True},
             )
-            properties.state = AAZStrType(
-                flags={"read_only": True},
-            )
-            properties.status = AAZStrType(
-                flags={"read_only": True},
-            )
+            properties.state = AAZStrType()
+            properties.status = AAZStrType()
 
             configuration = cls._schema_on_200.value.Element.properties.configuration
             configuration.configuration_type = AAZStrType(

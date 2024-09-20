@@ -41,9 +41,9 @@ class Create(AAZCommand):
     """
 
     _aaz_info = {
-        "version": "2023-10-01-preview",
+        "version": "2024-09-01",
         "resources": [
-            ["mgmt-plane", "/subscriptions/{}/resourcegroups/{}/providers/microsoft.workloads/sapvirtualinstances/{}", "2023-10-01-preview"],
+            ["mgmt-plane", "/subscriptions/{}/resourcegroups/{}/providers/microsoft.workloads/sapvirtualinstances/{}", "2024-09-01"],
         ]
     }
 
@@ -76,37 +76,157 @@ class Create(AAZCommand):
             ),
         )
 
-        # define Arg Group "Body"
+        # define Arg Group "Properties"
+
+        _args_schema = cls._args_schema
+        _args_schema.configuration = AAZObjectArg(
+            options=["--configuration"],
+            arg_group="Properties",
+            help="Defines if the SAP system is being created using Azure Center for SAP solutions (ACSS) or if an existing SAP system is being registered with ACSS",
+        )
+        _args_schema.environment = AAZStrArg(
+            options=["--environment"],
+            arg_group="Properties",
+            help="Defines the environment type - Production/Non Production.",
+            enum={"NonProd": "NonProd", "Prod": "Prod"},
+        )
+        _args_schema.managed_resource_group_configuration = AAZObjectArg(
+            options=["--managed-resource-group-configuration"],
+            arg_group="Properties",
+            help="Managed resource group configuration",
+        )
+        _args_schema.managed_resources_network_access_type = AAZStrArg(
+            options=["--managed-resources-network-access-type"],
+            arg_group="Properties",
+            help="Specifies the network access configuration for the resources that will be deployed in the Managed Resource Group. The options to choose from are Public and Private. If 'Private' is chosen, the Storage Account service tag should be enabled on the subnets in which the SAP VMs exist. This is required for establishing connectivity between VM extensions and the managed resource group storage account. This setting is currently applicable only to Storage Account. Learn more here https://go.microsoft.com/fwlink/?linkid=2247228",
+            enum={"Private": "Private", "Public": "Public"},
+        )
+        _args_schema.sap_product = AAZStrArg(
+            options=["--sap-product"],
+            arg_group="Properties",
+            help="Defines the SAP Product type.",
+            enum={"ECC": "ECC", "Other": "Other", "S4HANA": "S4HANA"},
+        )
+
+        configuration = cls._args_schema.configuration
+        configuration.deployment = AAZObjectArg(
+            options=["deployment"],
+        )
+        configuration.deployment_with_os_config = AAZObjectArg(
+            options=["deployment-with-os-config"],
+        )
+        configuration.discovery = AAZObjectArg(
+            options=["discovery"],
+        )
+
+        deployment = cls._args_schema.configuration.deployment
+        deployment.app_location = AAZStrArg(
+            options=["app-location"],
+            help="The geo-location where the SAP system is to be created.",
+        )
+        deployment.infrastructure_configuration = AAZObjectArg(
+            options=["infrastructure-configuration"],
+            help="The infrastructure configuration.",
+        )
+        cls._build_args_infrastructure_configuration_create(deployment.infrastructure_configuration)
+        deployment.software_configuration = AAZObjectArg(
+            options=["software-configuration"],
+            help="The software configuration.",
+        )
+        cls._build_args_software_configuration_create(deployment.software_configuration)
+
+        deployment_with_os_config = cls._args_schema.configuration.deployment_with_os_config
+        deployment_with_os_config.app_location = AAZStrArg(
+            options=["app-location"],
+            help="The geo-location where the SAP system is to be created.",
+        )
+        deployment_with_os_config.infrastructure_configuration = AAZObjectArg(
+            options=["infrastructure-configuration"],
+            help="The infrastructure configuration.",
+        )
+        cls._build_args_infrastructure_configuration_create(deployment_with_os_config.infrastructure_configuration)
+        deployment_with_os_config.os_sap_configuration = AAZObjectArg(
+            options=["os-sap-configuration"],
+            help="The OS and SAP configuration.",
+        )
+        deployment_with_os_config.software_configuration = AAZObjectArg(
+            options=["software-configuration"],
+            help="The software configuration.",
+        )
+        cls._build_args_software_configuration_create(deployment_with_os_config.software_configuration)
+
+        os_sap_configuration = cls._args_schema.configuration.deployment_with_os_config.os_sap_configuration
+        os_sap_configuration.deployer_vm_packages = AAZObjectArg(
+            options=["deployer-vm-packages"],
+            help="The url and storage account ID where deployer VM packages are uploaded",
+        )
+        os_sap_configuration.sap_fqdn = AAZStrArg(
+            options=["sap-fqdn"],
+            help="The FQDN to set for the SAP system",
+        )
+
+        deployer_vm_packages = cls._args_schema.configuration.deployment_with_os_config.os_sap_configuration.deployer_vm_packages
+        deployer_vm_packages.storage_account_id = AAZStrArg(
+            options=["storage-account-id"],
+            help="The deployer VM packages storage account id",
+        )
+        deployer_vm_packages.url = AAZStrArg(
+            options=["url"],
+            help="The URL to the deployer VM packages file.",
+        )
+
+        discovery = cls._args_schema.configuration.discovery
+        discovery.central_server_vm_id = AAZStrArg(
+            options=["central-server-vm-id"],
+            help="The virtual machine ID of the Central Server.",
+        )
+        discovery.managed_rg_storage_account_name = AAZStrArg(
+            options=["managed-rg-storage-account-name"],
+            help="The custom storage account name for the storage account created by the service in the managed resource group created as part of VIS deployment.<br><br>Refer to the storage account naming rules [here](https://learn.microsoft.com/azure/azure-resource-manager/management/resource-name-rules#microsoftstorage).<br><br>If not provided, the service will create the storage account with a random name.",
+            fmt=AAZStrArgFormat(
+                max_length=24,
+                min_length=3,
+            ),
+        )
+
+        managed_resource_group_configuration = cls._args_schema.managed_resource_group_configuration
+        managed_resource_group_configuration.name = AAZStrArg(
+            options=["name"],
+            help="Managed resource group name",
+        )
+
+        # define Arg Group "Resource"
 
         _args_schema = cls._args_schema
         _args_schema.identity = AAZObjectArg(
             options=["--identity"],
-            arg_group="Body",
-            help="A pre-created user assigned identity with appropriate roles assigned. To learn more on identity and roles required, visit the ACSS how-to-guide.",
+            arg_group="Resource",
+            help="The managed service identities assigned to this resource.",
         )
         _args_schema.location = AAZResourceLocationArg(
-            arg_group="Body",
+            arg_group="Resource",
             help="The geo-location where the resource lives",
+            required=True,
             fmt=AAZResourceLocationArgFormat(
                 resource_group_arg="resource_group",
             ),
         )
         _args_schema.tags = AAZDictArg(
             options=["--tags"],
-            arg_group="Body",
+            arg_group="Resource",
             help="Resource tags.",
         )
 
         identity = cls._args_schema.identity
         identity.type = AAZStrArg(
             options=["type"],
-            help="Type of manage identity",
+            help="Type of managed service identity (where both SystemAssigned and UserAssigned types are allowed).",
             required=True,
-            enum={"None": "None", "UserAssigned": "UserAssigned"},
+            enum={"None": "None", "SystemAssigned": "SystemAssigned", "SystemAssigned,UserAssigned": "SystemAssigned,UserAssigned", "UserAssigned": "UserAssigned"},
         )
         identity.user_assigned_identities = AAZDictArg(
             options=["user-assigned-identities"],
-            help="User assigned identities dictionary",
+            help="The set of user assigned identities associated with the resource. The userAssignedIdentities dictionary keys will be ARM resource ids in the form: '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{identityName}. The dictionary values can be empty objects ({}) in requests.",
         )
 
         user_assigned_identities = cls._args_schema.identity.user_assigned_identities
@@ -117,82 +237,6 @@ class Create(AAZCommand):
 
         tags = cls._args_schema.tags
         tags.Element = AAZStrArg()
-
-        # define Arg Group "Configuration"
-
-        _args_schema = cls._args_schema
-        _args_schema.configuration_org = AAZObjectArg(
-            options=["--configuration-org"],
-            arg_group="Configuration",
-            help="Path to the configuration file. Support json-file and yaml-file.",
-        )
-        _args_schema.discovery_org = AAZObjectArg(
-            options=["--discovery-org"],
-            arg_group="Configuration",
-            help="discovery",
-        )
-
-        configuration_org = cls._args_schema.configuration_org
-        configuration_org.app_location = AAZStrArg(
-            options=["app-location"],
-            help="The geo-location where the SAP system is to be created.",
-        )
-        configuration_org.infrastructure_configuration = AAZObjectArg(
-            options=["infrastructure-configuration"],
-            help="The infrastructure configuration.",
-        )
-        cls._build_args_infrastructure_configuration_create(configuration_org.infrastructure_configuration)
-        configuration_org.software_configuration = AAZObjectArg(
-            options=["software-configuration"],
-            help="The software configuration.",
-        )
-        cls._build_args_software_configuration_create(configuration_org.software_configuration)
-
-        discovery_org = cls._args_schema.discovery_org
-        discovery_org.central_server_vm_id = AAZStrArg(
-            options=["central-server-vm-id"],
-            help="The virtual machine ID of the Central Server.",
-        )
-        discovery_org.managed_rg_sa_name = AAZStrArg(
-            options=["managed-rg-sa-name"],
-            help="The custom storage account name for the storage account created by the service in the managed resource group created as part of VIS deployment.<br><br>Refer to the storage account naming rules [here](https://learn.microsoft.com/azure/azure-resource-manager/management/resource-name-rules#microsoftstorage).<br><br>If not provided, the service will create the storage account with a random name.",
-            fmt=AAZStrArgFormat(
-                max_length=24,
-                min_length=3,
-            ),
-        )
-
-        # define Arg Group "ManagedResourceGroupConfiguration"
-
-        _args_schema = cls._args_schema
-        _args_schema.managed_rg_name = AAZStrArg(
-            options=["--managed-rg-name"],
-            arg_group="ManagedResourceGroupConfiguration",
-            help="Managed resource group name",
-        )
-
-        # define Arg Group "Properties"
-
-        _args_schema = cls._args_schema
-        _args_schema.environment = AAZStrArg(
-            options=["--environment"],
-            arg_group="Properties",
-            help="Defines the environment type - Production/Non Production.",
-            enum={"NonProd": "NonProd", "Prod": "Prod"},
-        )
-        _args_schema.managed_resources_network_access_type = AAZStrArg(
-            options=["--mrg-network-access-typ", "--managed-resources-network-access-type"],
-            arg_group="Properties",
-            help="Specifies the network access configuration for the resources that will be deployed in the Managed Resource Group. The options to choose from are Public and Private. If 'Private' is chosen, the Storage Account service tag should be enabled on the subnets in which the SAP VMs exist. This is required for establishing connectivity between VM extensions and the managed resource group storage account. This setting is currently applicable only to Storage Account. Learn more here https://go.microsoft.com/fwlink/?linkid=2247228",
-            default="Public",
-            enum={"Private": "Private", "Public": "Public"},
-        )
-        _args_schema.sap_product = AAZStrArg(
-            options=["--sap-product"],
-            arg_group="Properties",
-            help="Defines the SAP Product type.",
-            enum={"ECC": "ECC", "Other": "Other", "S4HANA": "S4HANA"},
-        )
         return cls._args_schema
 
     _args_disk_configuration_create = None
@@ -254,10 +298,11 @@ class Create(AAZCommand):
             help="The fencing client id.",
             required=True,
         )
-        high_availability_software_configuration_create.fencing_client_password = AAZStrArg(
+        high_availability_software_configuration_create.fencing_client_password = AAZPasswordArg(
             options=["fencing-client-password"],
             help="The fencing client id secret/password. The secret should never expire. This will be used pacemaker to start/stop the cluster VMs.",
             required=True,
+            prompt={"cls": "AAZPromptPasswordInput", "kwargs": {"msg": "Password:"}},
         )
 
         _schema.fencing_client_id = cls._args_high_availability_software_configuration_create.fencing_client_id
@@ -465,6 +510,7 @@ class Create(AAZCommand):
         )
         database_server.load_balancer = AAZObjectArg(
             options=["load-balancer"],
+            help="The resource names object for load balancer and related resources.",
         )
         cls._build_args_load_balancer_resource_names_create(database_server.load_balancer)
         database_server.virtual_machines = AAZListArg(
@@ -534,10 +580,6 @@ class Create(AAZCommand):
         )
         transport_file_share_configuration.mount = AAZObjectArg(
             options=["mount"],
-        )
-        transport_file_share_configuration.skip = AAZObjectArg(
-            options=["skip"],
-            blank={},
         )
 
         create_and_mount = cls._args_infrastructure_configuration_create.three_tier.storage_configuration.transport_file_share_configuration.create_and_mount
@@ -667,6 +709,7 @@ class Create(AAZCommand):
         )
         sap_install_without_os_config.high_availability_software_configuration = AAZObjectArg(
             options=["high-availability-software-configuration"],
+            help="Gets or sets the HA software configuration.",
         )
         cls._build_args_high_availability_software_configuration_create(sap_install_without_os_config.high_availability_software_configuration)
         sap_install_without_os_config.sap_bits_storage_account_id = AAZStrArg(
@@ -706,10 +749,11 @@ class Create(AAZCommand):
             help="The software version to install.",
             required=True,
         )
-        service_initiated.ssh_private_key = AAZStrArg(
+        service_initiated.ssh_private_key = AAZPasswordArg(
             options=["ssh-private-key"],
             help="The SSH private key.",
             required=True,
+            prompt={"cls": "AAZPromptPasswordInput", "kwargs": {"msg": "Password:"}},
         )
 
         _schema.external = cls._args_software_configuration_create.external
@@ -768,9 +812,10 @@ class Create(AAZCommand):
         )
 
         os_profile = cls._args_virtual_machine_configuration_create.os_profile
-        os_profile.admin_password = AAZStrArg(
+        os_profile.admin_password = AAZPasswordArg(
             options=["admin-password"],
             help="Specifies the password of the administrator account. <br><br> **Minimum-length (Windows):** 8 characters <br><br> **Minimum-length (Linux):** 6 characters <br><br> **Max-length (Windows):** 123 characters <br><br> **Max-length (Linux):** 72 characters <br><br> **Complexity requirements:** 3 out of 4 conditions below need to be fulfilled <br> Has lower characters <br>Has upper characters <br> Has a digit <br> Has a special character (Regex match [\W_]) <br><br> **Disallowed values:** \"abc@123\", \"P@$$w0rd\", \"P@ssw0rd\", \"P@ssword123\", \"Pa$$word\", \"pass@word1\", \"Password!\", \"Password1\", \"Password22\", \"iloveyou!\" <br><br> For resetting the password, see [How to reset the Remote Desktop service or its login password in a Windows VM](https://docs.microsoft.com/troubleshoot/azure/virtual-machines/reset-rdp) <br><br> For resetting root password, see [Manage users, SSH, and check or repair disks on Azure Linux VMs using the VMAccess Extension](https://docs.microsoft.com/troubleshoot/azure/virtual-machines/troubleshoot-ssh-connection)",
+            prompt={"cls": "AAZPromptPasswordInput", "kwargs": {"msg": "Password:"}},
         )
         os_profile.admin_username = AAZStrArg(
             options=["admin-username"],
@@ -784,10 +829,6 @@ class Create(AAZCommand):
         os_configuration = cls._args_virtual_machine_configuration_create.os_profile.os_configuration
         os_configuration.linux = AAZObjectArg(
             options=["linux"],
-        )
-        os_configuration.windows = AAZObjectArg(
-            options=["windows"],
-            blank={},
         )
 
         linux = cls._args_virtual_machine_configuration_create.os_profile.os_configuration.linux
@@ -820,9 +861,10 @@ class Create(AAZCommand):
         )
 
         ssh_key_pair = cls._args_virtual_machine_configuration_create.os_profile.os_configuration.linux.ssh_key_pair
-        ssh_key_pair.private_key = AAZStrArg(
+        ssh_key_pair.private_key = AAZPasswordArg(
             options=["private-key"],
             help="SSH private key.",
+            prompt={"cls": "AAZPromptPasswordInput", "kwargs": {"msg": "Password:"}},
         )
         ssh_key_pair.public_key = AAZStrArg(
             options=["public-key"],
@@ -892,7 +934,7 @@ class Create(AAZCommand):
 
     def _execute_operations(self):
         self.pre_operations()
-        yield self.SAPVirtualInstancesCreate(ctx=self.ctx)()
+        yield self.SapVirtualInstancesCreate(ctx=self.ctx)()
         self.post_operations()
 
     @register_callback
@@ -907,7 +949,7 @@ class Create(AAZCommand):
         result = self.deserialize_output(self.ctx.vars.instance, client_flatten=True)
         return result
 
-    class SAPVirtualInstancesCreate(AAZHttpOperation):
+    class SapVirtualInstancesCreate(AAZHttpOperation):
         CLIENT_TYPE = "MgmtClient"
 
         def __call__(self, *args, **kwargs):
@@ -971,7 +1013,7 @@ class Create(AAZCommand):
         def query_parameters(self):
             parameters = {
                 **self.serialize_query_param(
-                    "api-version", "2023-10-01-preview",
+                    "api-version", "2024-09-01",
                     required=True,
                 ),
             }
@@ -994,11 +1036,11 @@ class Create(AAZCommand):
             _content_value, _builder = self.new_content_builder(
                 self.ctx.args,
                 typ=AAZObjectType,
-                typ_kwargs={"flags": {"client_flatten": True}}
+                typ_kwargs={"flags": {"required": True, "client_flatten": True}}
             )
             _builder.set_prop("identity", AAZObjectType, ".identity")
             _builder.set_prop("location", AAZStrType, ".location", typ_kwargs={"flags": {"required": True}})
-            _builder.set_prop("properties", AAZObjectType, ".", typ_kwargs={"flags": {"required": True, "client_flatten": True}})
+            _builder.set_prop("properties", AAZObjectType, typ_kwargs={"flags": {"client_flatten": True}})
             _builder.set_prop("tags", AAZDictType, ".tags")
 
             identity = _builder.get(".identity")
@@ -1012,25 +1054,26 @@ class Create(AAZCommand):
 
             properties = _builder.get(".properties")
             if properties is not None:
-                properties.set_prop("configuration", AAZObjectType, ".", typ_kwargs={"flags": {"required": True}})
+                properties.set_prop("configuration", AAZObjectType, ".configuration", typ_kwargs={"flags": {"required": True}})
                 properties.set_prop("environment", AAZStrType, ".environment", typ_kwargs={"flags": {"required": True}})
-                properties.set_prop("managedResourceGroupConfiguration", AAZObjectType)
+                properties.set_prop("managedResourceGroupConfiguration", AAZObjectType, ".managed_resource_group_configuration")
                 properties.set_prop("managedResourcesNetworkAccessType", AAZStrType, ".managed_resources_network_access_type")
                 properties.set_prop("sapProduct", AAZStrType, ".sap_product", typ_kwargs={"flags": {"required": True}})
 
             configuration = _builder.get(".properties.configuration")
             if configuration is not None:
-                configuration.set_const("configurationType", "Deployment", AAZStrType, ".configuration_org", typ_kwargs={"flags": {"required": True}})
-                configuration.set_const("configurationType", "Discovery", AAZStrType, ".discovery_org", typ_kwargs={"flags": {"required": True}})
+                configuration.set_const("configurationType", "Deployment", AAZStrType, ".deployment", typ_kwargs={"flags": {"required": True}})
+                configuration.set_const("configurationType", "DeploymentWithOSConfig", AAZStrType, ".deployment_with_os_config", typ_kwargs={"flags": {"required": True}})
+                configuration.set_const("configurationType", "Discovery", AAZStrType, ".discovery", typ_kwargs={"flags": {"required": True}})
                 configuration.discriminate_by("configurationType", "Deployment")
                 configuration.discriminate_by("configurationType", "DeploymentWithOSConfig")
                 configuration.discriminate_by("configurationType", "Discovery")
 
             disc_deployment = _builder.get(".properties.configuration{configurationType:Deployment}")
             if disc_deployment is not None:
-                disc_deployment.set_prop("appLocation", AAZStrType, ".configuration_org.app_location")
-                _CreateHelper._build_schema_infrastructure_configuration_create(disc_deployment.set_prop("infrastructureConfiguration", AAZObjectType, ".configuration_org.infrastructure_configuration"))
-                _CreateHelper._build_schema_software_configuration_create(disc_deployment.set_prop("softwareConfiguration", AAZObjectType, ".configuration_org.software_configuration"))
+                disc_deployment.set_prop("appLocation", AAZStrType, ".deployment.app_location")
+                _CreateHelper._build_schema_infrastructure_configuration_create(disc_deployment.set_prop("infrastructureConfiguration", AAZObjectType, ".deployment.infrastructure_configuration"))
+                _CreateHelper._build_schema_software_configuration_create(disc_deployment.set_prop("softwareConfiguration", AAZObjectType, ".deployment.software_configuration"))
 
             disc_deployment_with_os_config = _builder.get(".properties.configuration{configurationType:DeploymentWithOSConfig}")
             if disc_deployment_with_os_config is not None:
@@ -1051,12 +1094,12 @@ class Create(AAZCommand):
 
             disc_discovery = _builder.get(".properties.configuration{configurationType:Discovery}")
             if disc_discovery is not None:
-                disc_discovery.set_prop("centralServerVmId", AAZStrType, ".discovery_org.central_server_vm_id")
-                disc_discovery.set_prop("managedRgStorageAccountName", AAZStrType, ".discovery_org.managed_rg_sa_name")
+                disc_discovery.set_prop("centralServerVmId", AAZStrType, ".discovery.central_server_vm_id")
+                disc_discovery.set_prop("managedRgStorageAccountName", AAZStrType, ".discovery.managed_rg_storage_account_name")
 
             managed_resource_group_configuration = _builder.get(".properties.managedResourceGroupConfiguration")
             if managed_resource_group_configuration is not None:
-                managed_resource_group_configuration.set_prop("name", AAZStrType, ".managed_rg_name")
+                managed_resource_group_configuration.set_prop("name", AAZStrType, ".name")
 
             tags = _builder.get(".tags")
             if tags is not None:
@@ -1093,7 +1136,7 @@ class Create(AAZCommand):
                 flags={"read_only": True},
             )
             _schema_on_200_201.properties = AAZObjectType(
-                flags={"required": True, "client_flatten": True},
+                flags={"client_flatten": True},
             )
             _schema_on_200_201.system_data = AAZObjectType(
                 serialized_name="systemData",
@@ -1105,6 +1148,14 @@ class Create(AAZCommand):
             )
 
             identity = cls._schema_on_200_201.identity
+            identity.principal_id = AAZStrType(
+                serialized_name="principalId",
+                flags={"read_only": True},
+            )
+            identity.tenant_id = AAZStrType(
+                serialized_name="tenantId",
+                flags={"read_only": True},
+            )
             identity.type = AAZStrType(
                 flags={"required": True},
             )
@@ -1134,12 +1185,8 @@ class Create(AAZCommand):
             properties.environment = AAZStrType(
                 flags={"required": True},
             )
-            properties.errors = AAZObjectType(
-                flags={"read_only": True},
-            )
-            properties.health = AAZStrType(
-                flags={"read_only": True},
-            )
+            properties.errors = AAZObjectType()
+            properties.health = AAZStrType()
             properties.managed_resource_group_configuration = AAZObjectType(
                 serialized_name="managedResourceGroupConfiguration",
             )
@@ -1154,12 +1201,8 @@ class Create(AAZCommand):
                 serialized_name="sapProduct",
                 flags={"required": True},
             )
-            properties.state = AAZStrType(
-                flags={"read_only": True},
-            )
-            properties.status = AAZStrType(
-                flags={"read_only": True},
-            )
+            properties.state = AAZStrType()
+            properties.status = AAZStrType()
 
             configuration = cls._schema_on_200_201.properties.configuration
             configuration.configuration_type = AAZStrType(
@@ -1401,10 +1444,8 @@ class _CreateHelper:
         if transport_file_share_configuration is not None:
             transport_file_share_configuration.set_const("configurationType", "CreateAndMount", AAZStrType, ".create_and_mount", typ_kwargs={"flags": {"required": True}})
             transport_file_share_configuration.set_const("configurationType", "Mount", AAZStrType, ".mount", typ_kwargs={"flags": {"required": True}})
-            transport_file_share_configuration.set_const("configurationType", "Skip", AAZStrType, ".skip", typ_kwargs={"flags": {"required": True}})
             transport_file_share_configuration.discriminate_by("configurationType", "CreateAndMount")
             transport_file_share_configuration.discriminate_by("configurationType", "Mount")
-            transport_file_share_configuration.discriminate_by("configurationType", "Skip")
 
         disc_create_and_mount = _builder.get("{deploymentType:ThreeTier}.storageConfiguration.transportFileShareConfiguration{configurationType:CreateAndMount}")
         if disc_create_and_mount is not None:
@@ -1499,9 +1540,7 @@ class _CreateHelper:
         os_configuration = _builder.get(".osProfile.osConfiguration")
         if os_configuration is not None:
             os_configuration.set_const("osType", "Linux", AAZStrType, ".linux", typ_kwargs={"flags": {"required": True}})
-            os_configuration.set_const("osType", "Windows", AAZStrType, ".windows", typ_kwargs={"flags": {"required": True}})
             os_configuration.discriminate_by("osType", "Linux")
-            os_configuration.discriminate_by("osType", "Windows")
 
         disc_linux = _builder.get(".osProfile.osConfiguration{osType:Linux}")
         if disc_linux is not None:
