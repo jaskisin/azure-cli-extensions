@@ -163,6 +163,125 @@ class SVICreate(_SVICreate):
         _schema.os_profile = cls._args_virtual_machine_configuration_create.os_profile
         _schema.vm_size = cls._args_virtual_machine_configuration_create.vm_size
 
+    @classmethod
+    def _build_args_high_availability_software_configuration_create(cls, _schema):
+        from azure.cli.core.aaz import AAZObjectArg, AAZStrArg, AAZPasswordArg, AAZPromptPasswordInput
+        if cls._args_high_availability_software_configuration_create is not None:
+            _schema.fencing_client_id = cls._args_high_availability_software_configuration_create.fencing_client_id
+            _schema.fencing_client_password = cls._args_high_availability_software_configuration_create.fencing_client_password
+            return
+
+        cls._args_high_availability_software_configuration_create = AAZObjectArg()
+
+        high_availability_software_configuration_create = cls._args_high_availability_software_configuration_create
+        high_availability_software_configuration_create.fencing_client_id = AAZStrArg(
+            options=["fencing-client-id"],
+            help="The fencing client id.",
+            required=True,
+        )
+        high_availability_software_configuration_create.fencing_client_password = AAZPasswordArg(
+            options=["fencing-client-password"],
+            help="The fencing client id secret/password. The secret should never expire. This will be used pacemaker to start/stop the cluster VMs.",
+            required=True,
+            blank=AAZPromptPasswordInput(
+                msg="Fencing client password:",
+                confirm=True,
+            )
+        )
+
+        _schema.fencing_client_id = cls._args_high_availability_software_configuration_create.fencing_client_id
+        _schema.fencing_client_password = cls._args_high_availability_software_configuration_create.fencing_client_password
+
+    @classmethod
+    def _build_args_software_configuration_create(cls, _schema):
+        from azure.cli.core.aaz import AAZObjectArg, AAZStrArg, AAZPasswordArg, AAZBoolArg, AAZPromptPasswordInput
+        if cls._args_software_configuration_create is not None:
+            _schema.external = cls._args_software_configuration_create.external
+            _schema.sap_install_without_os_config = cls._args_software_configuration_create.sap_install_without_os_config
+            _schema.service_initiated = cls._args_software_configuration_create.service_initiated
+            return
+
+        cls._args_software_configuration_create = AAZObjectArg()
+
+        software_configuration_create = cls._args_software_configuration_create
+        software_configuration_create.external = AAZObjectArg(
+            options=["external"],
+        )
+        software_configuration_create.sap_install_without_os_config = AAZObjectArg(
+            options=["sap-install-without-os-config"],
+        )
+        software_configuration_create.service_initiated = AAZObjectArg(
+            options=["service-initiated"],
+        )
+
+        external = cls._args_software_configuration_create.external
+        external.central_server_vm_id = AAZStrArg(
+            options=["central-server-vm-id"],
+            help="The resource ID of the virtual machine containing the central server instance.",
+        )
+
+        sap_install_without_os_config = cls._args_software_configuration_create.sap_install_without_os_config
+        sap_install_without_os_config.bom_url = AAZStrArg(
+            options=["bom-url"],
+            help="The URL to the SAP Build of Materials(BOM) file.",
+            required=True,
+        )
+        sap_install_without_os_config.high_availability_software_configuration = AAZObjectArg(
+            options=["high-availability-software-configuration"],
+            help="Gets or sets the HA software configuration.",
+        )
+        cls._build_args_high_availability_software_configuration_create(sap_install_without_os_config.high_availability_software_configuration)
+        sap_install_without_os_config.sap_bits_storage_account_id = AAZStrArg(
+            options=["sap-bits-storage-account-id"],
+            help="The SAP bits storage account id.",
+            required=True,
+        )
+        sap_install_without_os_config.software_version = AAZStrArg(
+            options=["software-version"],
+            help="The software version to install.",
+            required=True,
+        )
+
+        service_initiated = cls._args_software_configuration_create.service_initiated
+        service_initiated.bom_url = AAZStrArg(
+            options=["bom-url"],
+            help="The URL to the SAP Build of Materials(BOM) file.",
+            required=True,
+        )
+        service_initiated.high_availability_software_configuration = AAZObjectArg(
+            options=["high-availability-software-configuration"],
+            help="Gets or sets the HA software configuration.",
+        )
+        cls._build_args_high_availability_software_configuration_create(service_initiated.high_availability_software_configuration)
+        service_initiated.sap_bits_storage_account_id = AAZStrArg(
+            options=["sap-bits-storage-account-id"],
+            help="The SAP bits storage account id.",
+            required=True,
+        )
+        service_initiated.sap_fqdn = AAZStrArg(
+            options=["sap-fqdn"],
+            help="The FQDN to set for the SAP system during install.",
+            required=True,
+        )
+        service_initiated.software_version = AAZStrArg(
+            options=["software-version"],
+            help="The software version to install.",
+            required=True,
+        )
+        service_initiated.ssh_private_key = AAZPasswordArg(
+            options=["ssh-private-key"],
+            help="The SSH private key.",
+            required=True,
+            blank=AAZPromptPasswordInput(
+                msg="SSH Private key:",
+                confirm=True,
+            )
+        )
+
+        _schema.external = cls._args_software_configuration_create.external
+        _schema.sap_install_without_os_config = cls._args_software_configuration_create.sap_install_without_os_config
+        _schema.service_initiated = cls._args_software_configuration_create.service_initiated
+
     def pre_operations(self):
         args = self.ctx.args
         if has_value(args.configuration):
