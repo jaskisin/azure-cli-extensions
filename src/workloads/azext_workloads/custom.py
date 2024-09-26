@@ -42,22 +42,126 @@ class SVICreate(_SVICreate):
         args_schema.configuration_org._registered = False
         args_schema.discovery_org._registered = False
         return args_schema
-
     
+    @classmethod
     def _build_args_virtual_machine_configuration_create(cls, _schema):
-        from azure.cli.core.aaz import AAZPasswordArg, AAZPromptPasswordInput
-        args_vmconfig_schema = super()._build_args_virtual_machine_configuration_create(_schema)
-        # Modify the help text for the admin_password argument
-        args_vmconfig_schema.os_profile = cls._args_virtual_machine_configuration_create.os_profile
-        args_vmconfig_schema.os_profile.admin_password = AAZPasswordArg(
+        from azure.cli.core.aaz import AAZObjectArg, AAZStrArg, AAZResourceIdArg, AAZPasswordArg, AAZBoolArg, AAZListArg, AAZPromptPasswordInput
+        if cls._args_virtual_machine_configuration_create is not None:
+            _schema.image_reference = cls._args_virtual_machine_configuration_create.image_reference
+            _schema.os_profile = cls._args_virtual_machine_configuration_create.os_profile
+            _schema.vm_size = cls._args_virtual_machine_configuration_create.vm_size
+            return
+
+        cls._args_virtual_machine_configuration_create = AAZObjectArg()
+
+        virtual_machine_configuration_create = cls._args_virtual_machine_configuration_create
+        virtual_machine_configuration_create.image_reference = AAZObjectArg(
+            options=["image-reference"],
+            help="The image reference.",
+            required=True,
+        )
+        virtual_machine_configuration_create.os_profile = AAZObjectArg(
+            options=["os-profile"],
+            help="The OS profile.",
+            required=True,
+        )
+        virtual_machine_configuration_create.vm_size = AAZStrArg(
+            options=["vm-size"],
+            help="The virtual machine size.",
+            required=True,
+        )
+
+        image_reference = cls._args_virtual_machine_configuration_create.image_reference
+        image_reference.id = AAZResourceIdArg(
+            options=["id"],
+            help="Specifies the ARM resource ID of the Azure Compute Gallery image version used for creating ACSS VMs. You will need to provide this input when you choose to deploy virtual machines in ACSS with OS image from the Azure Compute gallery.",
+        )
+        image_reference.offer = AAZStrArg(
+            options=["offer"],
+            help="Specifies the offer of the platform image or marketplace image used to create the virtual machine.",
+        )
+        image_reference.publisher = AAZStrArg(
+            options=["publisher"],
+            help="The image publisher.",
+        )
+        image_reference.sku = AAZStrArg(
+            options=["sku"],
+            help="The image SKU.",
+        )
+        image_reference.version = AAZStrArg(
+            options=["version"],
+            help="Specifies the version of the platform image or marketplace image used to create the virtual machine. The allowed formats are Major.Minor.Build or 'latest'. Major, Minor, and Build are decimal numbers. Specify 'latest' to use the latest version of an image available at deploy time. Even if you use 'latest', the VM image will not automatically update after deploy time even if a new version becomes available.",
+        )
+
+        os_profile = cls._args_virtual_machine_configuration_create.os_profile
+        os_profile.admin_password = AAZPasswordArg(
             options=["admin-password"],
             help="Specifies the password of the administrator account. <br><br> **Minimum-length (Windows):** 8 characters <br><br> **Minimum-length (Linux):** 6 characters <br><br> **Max-length (Windows):** 123 characters <br><br> **Max-length (Linux):** 72 characters <br><br> **Complexity requirements:** 3 out of 4 conditions below need to be fulfilled <br> Has lower characters <br>Has upper characters <br> Has a digit <br> Has a special character (Regex match [\W_]) <br><br> **Disallowed values:** \"abc@123\", \"P@$$w0rd\", \"P@ssw0rd\", \"P@ssword123\", \"Pa$$word\", \"pass@word1\", \"Password!\", \"Password1\", \"Password22\", \"iloveyou!\" <br><br> For resetting the password, see [How to reset the Remote Desktop service or its login password in a Windows VM](https://docs.microsoft.com/troubleshoot/azure/virtual-machines/reset-rdp) <br><br> For resetting root password, see [Manage users, SSH, and check or repair disks on Azure Linux VMs using the VMAccess Extension](https://docs.microsoft.com/troubleshoot/azure/virtual-machines/troubleshoot-ssh-connection)",
             blank=AAZPromptPasswordInput(
                 msg="Password:",
                 confirm=True,
-                ),
+            )
         )
-        return args_vmconfig_schema
+        os_profile.admin_username = AAZStrArg(
+            options=["admin-username"],
+            help="Specifies the name of the administrator account. <br><br> This property cannot be updated after the VM is created. <br><br> **Windows-only restriction:** Cannot end in \".\" <br><br> **Disallowed values:** \"administrator\", \"admin\", \"user\", \"user1\", \"test\", \"user2\", \"test1\", \"user3\", \"admin1\", \"1\", \"123\", \"a\", \"actuser\", \"adm\", \"admin2\", \"aspnet\", \"backup\", \"console\", \"david\", \"guest\", \"john\", \"owner\", \"root\", \"server\", \"sql\", \"support\", \"support_388945a0\", \"sys\", \"test2\", \"test3\", \"user4\", \"user5\". <br><br> **Minimum-length (Linux):** 1  character <br><br> **Max-length (Linux):** 64 characters <br><br> **Max-length (Windows):** 20 characters.",
+        )
+        os_profile.os_configuration = AAZObjectArg(
+            options=["os-configuration"],
+            help="Specifies Windows operating system settings on the virtual machine.",
+        )
+
+        os_configuration = cls._args_virtual_machine_configuration_create.os_profile.os_configuration
+        os_configuration.linux = AAZObjectArg(
+            options=["linux"],
+        )
+
+        linux = cls._args_virtual_machine_configuration_create.os_profile.os_configuration.linux
+        linux.disable_password_authentication = AAZBoolArg(
+            options=["disable-password-authentication"],
+            help="Specifies whether password authentication should be disabled.",
+        )
+        linux.ssh = AAZObjectArg(
+            options=["ssh"],
+            help="Specifies the ssh key configuration for a Linux OS. (This property is deprecated, please use 'sshKeyPair' instead)",
+        )
+        linux.ssh_key_pair = AAZObjectArg(
+            options=["ssh-key-pair"],
+            help="The SSH Key-pair used to authenticate with the VM's.",
+        )
+
+        ssh = cls._args_virtual_machine_configuration_create.os_profile.os_configuration.linux.ssh
+        ssh.public_keys = AAZListArg(
+            options=["public-keys"],
+            help="The list of SSH public keys used to authenticate with linux based VMs.",
+        )
+
+        public_keys = cls._args_virtual_machine_configuration_create.os_profile.os_configuration.linux.ssh.public_keys
+        public_keys.Element = AAZObjectArg()
+
+        _element = cls._args_virtual_machine_configuration_create.os_profile.os_configuration.linux.ssh.public_keys.Element
+        _element.key_data = AAZStrArg(
+            options=["key-data"],
+            help="SSH public key certificate used to authenticate with the VM through ssh. The key needs to be at least 2048-bit and in ssh-rsa format. <br><br> For creating ssh keys, see [Create SSH keys on Linux and Mac for Linux VMs in Azure](https://docs.microsoft.com/azure/virtual-machines/linux/create-ssh-keys-detailed).",
+        )
+
+        ssh_key_pair = cls._args_virtual_machine_configuration_create.os_profile.os_configuration.linux.ssh_key_pair
+        ssh_key_pair.private_key = AAZPasswordArg(
+            options=["private-key"],
+            help="SSH private key.",
+            blank=AAZPromptPasswordInput(
+                msg="SSH Private key:",
+                confirm=True,
+            )
+        )
+        ssh_key_pair.public_key = AAZStrArg(
+            options=["public-key"],
+            help="SSH public key",
+        )
+
+        _schema.image_reference = cls._args_virtual_machine_configuration_create.image_reference
+        _schema.os_profile = cls._args_virtual_machine_configuration_create.os_profile
+        _schema.vm_size = cls._args_virtual_machine_configuration_create.vm_size
 
     def pre_operations(self):
         args = self.ctx.args
@@ -130,3 +234,5 @@ class SVICreate(_SVICreate):
                         }
                     })
             return output
+        
+
